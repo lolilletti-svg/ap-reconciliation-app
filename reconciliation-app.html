@@ -1,0 +1,1789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AP Reconciliation Tool</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;500;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root {
+  --bg: #0d0d0d;
+  --surface: #161616;
+  --surface2: #1e1e1e;
+  --border: #2a2a2a;
+  --border2: #333;
+  --text: #f0f0f0;
+  --muted: #666;
+  --muted2: #888;
+  --accent: #c8f556;
+  --accent-dim: #a8d43a;
+  --accent-bg: rgba(200,245,86,0.08);
+  --red: #ff5c5c;
+  --red-bg: rgba(255,92,92,0.1);
+  --amber: #ffb347;
+  --amber-bg: rgba(255,179,71,0.1);
+  --green: #4ade80;
+  --green-bg: rgba(74,222,128,0.1);
+  --blue: #60a5fa;
+  --blue-bg: rgba(96,165,250,0.1);
+  --purple: #a78bfa;
+  --purple-bg: rgba(167,139,250,0.1);
+  --radius: 10px;
+  --font-display: 'Syne', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+  --font-mono: 'DM Mono', monospace;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: var(--font-body); font-size: 14px; line-height: 1.6; min-height: 100vh; }
+.app { max-width: 1000px; margin: 0 auto; padding: 40px 24px 80px; }
+
+/* HEADER */
+header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 48px; gap: 20px; }
+.header-left { flex: 1; }
+.logo { display: inline-flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.logo-mark { width: 32px; height: 32px; background: var(--accent); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-weight: 700; font-size: 14px; color: #0d0d0d; letter-spacing: -0.5px; }
+.logo-text { font-family: var(--font-display); font-size: 13px; font-weight: 600; color: var(--muted2); letter-spacing: 0.05em; text-transform: uppercase; }
+h1 { font-family: var(--font-display); font-size: clamp(26px, 4vw, 36px); font-weight: 700; letter-spacing: -0.03em; line-height: 1.1; color: var(--text); }
+h1 span { color: var(--accent); }
+.sub { margin-top: 8px; font-size: 13px; color: var(--muted2); font-weight: 300; max-width: 520px; }
+
+/* API BADGE */
+.api-badge { display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius); padding: 8px 12px; cursor: pointer; transition: border-color 0.15s; flex-shrink: 0; }
+.api-badge:hover { border-color: var(--accent); }
+.api-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--red); transition: background 0.3s; }
+.api-dot.connected { background: var(--green); }
+.api-badge-text { font-family: var(--font-mono); font-size: 11px; color: var(--muted2); }
+
+/* API PANEL */
+.api-panel { background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius); padding: 20px; margin-bottom: 28px; display: none; }
+.api-panel.open { display: block; }
+.api-panel label { font-size: 12px; color: var(--muted2); display: block; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
+.api-input-row { display: flex; gap: 8px; }
+.api-input { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 7px; padding: 9px 14px; font-family: var(--font-mono); font-size: 12px; color: var(--text); outline: none; transition: border-color 0.15s; }
+.api-input:focus { border-color: var(--accent); }
+.btn-save { background: var(--accent); border: none; border-radius: 7px; padding: 9px 18px; font-family: var(--font-display); font-size: 12px; font-weight: 600; color: #0d0d0d; cursor: pointer; transition: opacity 0.15s; }
+.btn-save:hover { opacity: 0.85; }
+.api-hint { font-size: 11px; color: var(--muted); margin-top: 8px; }
+.api-hint a { color: var(--blue); text-decoration: none; }
+
+/* STEP LABELS */
+.step-label { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+.step-num { width: 24px; height: 24px; border-radius: 50%; background: var(--surface2); border: 1px solid var(--border2); display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-size: 11px; font-weight: 700; color: var(--muted2); flex-shrink: 0; transition: all 0.2s; }
+.step-num.active { background: var(--accent); border-color: var(--accent); color: #0d0d0d; }
+.step-num.done { background: var(--green-bg); border-color: rgba(74,222,128,0.3); color: var(--green); }
+.step-title { font-family: var(--font-display); font-size: 13px; font-weight: 600; color: var(--muted2); letter-spacing: 0.04em; }
+.step-divider { border: none; border-top: 1px dashed var(--border2); margin: 28px 0; }
+
+/* ─── MODE TOGGLE ─── */
+.mode-toggle {
+  display: flex;
+  gap: 0;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 9px;
+  padding: 3px;
+  margin-bottom: 20px;
+  width: fit-content;
+}
+.mode-btn {
+  padding: 8px 18px;
+  border-radius: 7px;
+  border: none;
+  background: transparent;
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.18s;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.mode-btn.active {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border2);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+}
+.mode-btn.active.load-mode { color: var(--accent); border-color: rgba(200,245,86,0.3); }
+
+/* UPLOAD ZONES */
+.upload-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+.upload-zone { position: relative; border: 1px dashed var(--border2); border-radius: var(--radius); padding: 24px 20px; cursor: pointer; transition: border-color 0.15s, background 0.15s; overflow: hidden; }
+.upload-zone:hover { border-color: var(--accent); background: rgba(200,245,86,0.03); }
+.upload-zone.has-file { border-style: solid; border-color: var(--border2); background: var(--surface); }
+.upload-zone.dragging { border-color: var(--accent); background: var(--accent-bg); }
+.upload-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+
+/* NS zone */
+.upload-zone.ns-style:hover { border-color: var(--purple); background: var(--purple-bg); }
+.upload-zone.ns-style.has-file { border-style: solid; border-color: rgba(167,139,250,0.3); background: var(--surface); }
+.upload-zone.ns-style.dragging { border-color: var(--purple); background: var(--purple-bg); }
+
+/* Existing Excel zone — accent */
+.upload-zone.existing-style { border-color: rgba(200,245,86,0.25); }
+.upload-zone.existing-style:hover { border-color: var(--accent); background: var(--accent-bg); }
+.upload-zone.existing-style.has-file { border-style: solid; border-color: rgba(200,245,86,0.3); background: var(--surface); }
+.upload-zone.existing-style.dragging { border-color: var(--accent); background: var(--accent-bg); }
+
+.zone-tag { display: inline-block; font-family: var(--font-mono); font-size: 10px; font-weight: 500; padding: 3px 8px; border-radius: 4px; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 12px; }
+.zone-tag.vendor { background: var(--blue-bg); color: var(--blue); border: 1px solid rgba(96,165,250,0.2); }
+.zone-tag.bills { background: var(--green-bg); color: var(--green); border: 1px solid rgba(74,222,128,0.2); }
+.zone-tag.credits { background: var(--amber-bg); color: var(--amber); border: 1px solid rgba(255,179,71,0.2); }
+.upload-zone.credits-style:hover { border-color: var(--amber); background: var(--amber-bg); }
+.upload-zone.credits-style.has-file { border-style: solid; border-color: rgba(255,179,71,0.3); background: var(--surface); }
+.upload-zone.credits-style.dragging { border-color: var(--amber); background: var(--amber-bg); }
+.zone-check.amber-check { background: var(--amber); }
+.credits-status { display: none; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 8px; font-size: 12px; margin-top: 8px; font-family: var(--font-mono); }
+.credits-status.visible { display: flex; }
+.credits-status.ok { background: var(--amber-bg); border: 1px solid rgba(255,179,71,0.2); color: var(--amber); }
+.credits-status.warn { background: var(--red-bg); border: 1px solid rgba(255,92,92,0.2); color: var(--red); }
+.credits-status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+
+/* CREDITS VENDOR SELECTOR */
+.credits-vendor-selector-wrap { display: none; margin-top: 12px; max-width: 480px; }
+.credits-vendor-selector-wrap.visible { display: block; }
+.credits-vendor-selector-wrap label { font-size: 11px; color: var(--muted2); display: block; margin-bottom: 6px; font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.05em; }
+.credits-vendor-select:focus { border-color: var(--amber); }
+.credits-vendor-select option:checked { background: var(--amber); color: #0d0d0d; }
+.credits-vendor-count { font-family: var(--font-mono); font-size: 11px; color: var(--amber); margin-top: 6px; min-height: 16px; }
+.zone-tag.ns { background: var(--purple-bg); color: var(--purple); border: 1px solid rgba(167,139,250,0.2); }
+.zone-tag.existing { background: var(--accent-bg); color: var(--accent); border: 1px solid rgba(200,245,86,0.25); }
+
+.zone-title { font-family: var(--font-display); font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+.zone-desc { font-size: 12px; color: var(--muted); }
+.zone-file { font-size: 12px; color: var(--muted2); margin-top: 10px; font-family: var(--font-mono); display: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.zone-file.visible { display: block; }
+.zone-icon { font-size: 22px; margin-bottom: 10px; display: block; }
+.zone-check { display: none; width: 18px; height: 18px; background: var(--green); border-radius: 50%; position: absolute; top: 16px; right: 16px; align-items: center; justify-content: center; }
+.zone-check.visible { display: flex; }
+.zone-check::after { content: ''; width: 9px; height: 5px; border-left: 2px solid #0d0d0d; border-bottom: 2px solid #0d0d0d; transform: rotate(-45deg) translateY(-1px); }
+.zone-check.purple-check { background: var(--purple); }
+.zone-check.accent-check { background: var(--accent); }
+
+/* FILE CHIPS */
+.file-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.chip { display: inline-flex; align-items: center; gap: 5px; background: var(--surface2); border: 1px solid var(--border2); border-radius: 20px; padding: 3px 10px 3px 8px; font-family: var(--font-mono); font-size: 10px; color: var(--muted2); max-width: 180px; }
+.chip-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chip-loc { font-size: 9px; padding: 1px 6px; border-radius: 10px; background: var(--blue-bg); color: var(--blue); border: 1px solid rgba(96,165,250,0.2); white-space: nowrap; flex-shrink: 0; }
+.chip-remove { cursor: pointer; color: var(--muted); font-size: 13px; line-height: 1; flex-shrink: 0; padding: 0 2px; pointer-events: all; }
+.chip-remove:hover { color: var(--red); }
+.zone-hint { font-size: 11px; color: var(--muted); margin-top: 8px; font-style: italic; }
+.pill-loc { background: var(--blue-bg); color: var(--blue); border: 1px solid rgba(96,165,250,0.2); font-size: 9px; padding: 2px 7px; }
+
+/* NS STATUS */
+.ns-status { display: none; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 8px; font-size: 12px; margin-top: 12px; font-family: var(--font-mono); }
+.ns-status.visible { display: flex; }
+.ns-status.ok { background: var(--purple-bg); border: 1px solid rgba(167,139,250,0.2); color: var(--purple); }
+.ns-status.warn { background: var(--amber-bg); border: 1px solid rgba(255,179,71,0.2); color: var(--amber); }
+.ns-status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+
+/* EXISTING EXCEL STATUS */
+.existing-status { display: none; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 8px; font-size: 12px; margin-top: 12px; font-family: var(--font-mono); }
+.existing-status.visible { display: flex; }
+.existing-status.ok { background: var(--accent-bg); border: 1px solid rgba(200,245,86,0.2); color: var(--accent); }
+.existing-status.warn { background: var(--amber-bg); border: 1px solid rgba(255,179,71,0.2); color: var(--amber); }
+.existing-status.err { background: var(--red-bg); border: 1px solid rgba(255,92,92,0.2); color: var(--red); }
+.existing-status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+
+/* VENDOR SELECTOR */
+.vendor-selector-wrap { display: none; margin-top: 12px; max-width: 480px; }
+.vendor-selector-wrap.visible { display: block; }
+.vendor-selector-wrap label { font-size: 11px; color: var(--muted2); display: block; margin-bottom: 6px; font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.05em; }
+.vendor-select {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 7px;
+  padding: 4px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text);
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s;
+  min-height: 110px;
+  max-height: 200px;
+}
+.vendor-select:focus { border-color: var(--purple); }
+.vendor-select option {
+  padding: 6px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  background: var(--surface2);
+  color: var(--text);
+}
+.vendor-select option:checked {
+  background: var(--purple);
+  color: #0d0d0d;
+}
+.vendor-select-count {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--purple);
+  margin-top: 6px;
+  min-height: 16px;
+}
+
+/* RUN BUTTON */
+.run-btn { width: 100%; background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius); padding: 14px; font-family: var(--font-display); font-size: 14px; font-weight: 600; color: var(--muted2); cursor: not-allowed; transition: all 0.2s; letter-spacing: 0.01em; margin-bottom: 28px; }
+.run-btn.ready { background: var(--accent); border-color: var(--accent); color: #0d0d0d; cursor: pointer; }
+.run-btn.ready:hover { background: var(--accent-dim); }
+.run-btn.running { background: var(--surface2); border-color: var(--border2); color: var(--muted2); cursor: not-allowed; }
+
+/* LOG */
+.log-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; font-family: var(--font-mono); font-size: 11.5px; line-height: 1.8; min-height: 60px; margin-bottom: 28px; color: var(--muted2); }
+.log-line { display: flex; align-items: flex-start; gap: 8px; }
+.log-dot { width: 6px; height: 6px; border-radius: 50%; margin-top: 6px; flex-shrink: 0; }
+.log-dot.info { background: var(--blue); }
+.log-dot.ok { background: var(--green); }
+.log-dot.warn { background: var(--amber); }
+.log-dot.err { background: var(--red); }
+.log-dot.done { background: var(--accent); }
+.log-dot.ns { background: var(--purple); }
+.log-text.ok { color: var(--green); }
+.log-text.warn { color: var(--amber); }
+.log-text.err { color: var(--red); }
+.log-text.done { color: var(--accent); }
+.log-text.info { color: var(--muted2); }
+.log-text.ns { color: var(--purple); }
+
+/* RESULTS */
+#results { display: none; }
+.section-title { font-family: var(--font-display); font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
+.metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 28px; }
+.metric-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
+.metric-label { font-size: 11px; color: var(--muted); margin-bottom: 6px; letter-spacing: 0.03em; }
+.metric-value { font-family: var(--font-display); font-size: 26px; font-weight: 700; line-height: 1; }
+.metric-value.total { color: var(--text); }
+.metric-value.paid { color: var(--green); }
+.metric-value.unpaid { color: var(--amber); }
+.metric-value.notfound { color: var(--red); }
+
+/* TABLE */
+.table-section { margin-bottom: 24px; }
+.table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); }
+table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+thead th { background: var(--surface); border-bottom: 1px solid var(--border2); padding: 10px 14px; text-align: left; font-family: var(--font-mono); font-size: 10px; font-weight: 500; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; }
+tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: var(--surface2); }
+tbody td { padding: 9px 14px; color: var(--text); font-size: 12.5px; white-space: nowrap; }
+.td-inv { font-family: var(--font-mono); font-size: 11.5px; color: var(--muted2); }
+.td-amount { font-family: var(--font-mono); text-align: right; }
+.td-balance { font-family: var(--font-mono); text-align: right; color: var(--amber); }
+tfoot td { padding: 10px 14px; background: var(--surface); border-top: 1px solid var(--border2); font-family: var(--font-mono); font-size: 11px; font-weight: 500; color: var(--muted2); }
+tfoot .total-val { color: var(--text); text-align: right; }
+
+/* PILLS */
+.pill { display: inline-block; font-size: 10px; font-family: var(--font-mono); font-weight: 500; padding: 3px 9px; border-radius: 20px; letter-spacing: 0.03em; }
+.pill-paid { background: var(--green-bg); color: var(--green); border: 1px solid rgba(74,222,128,0.25); }
+.pill-unpaid { background: var(--amber-bg); color: var(--amber); border: 1px solid rgba(255,179,71,0.25); }
+.pill-notfound { background: var(--red-bg); color: var(--red); border: 1px solid rgba(255,92,92,0.25); }
+.pill-empty { background: rgba(255,255,255,0.05); color: var(--muted); border: 1px solid var(--border); }
+
+/* ACTIONS */
+.actions { display: flex; gap: 10px; }
+.btn-download { flex: 1; background: var(--accent); border: none; border-radius: var(--radius); padding: 12px 20px; font-family: var(--font-display); font-size: 13px; font-weight: 600; color: #0d0d0d; cursor: pointer; transition: opacity 0.15s; }
+.btn-download:hover { opacity: 0.85; }
+.btn-reset { background: transparent; border: 1px solid var(--border2); border-radius: var(--radius); padding: 12px 20px; font-family: var(--font-display); font-size: 13px; font-weight: 500; color: var(--muted2); cursor: pointer; transition: border-color 0.15s, color 0.15s; }
+.btn-reset:hover { border-color: var(--text); color: var(--text); }
+
+/* FOOTER */
+footer { margin-top: 64px; padding-top: 20px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+.footer-text { font-size: 11px; color: var(--muted); font-family: var(--font-mono); }
+.footer-badge { font-size: 10px; font-family: var(--font-mono); background: var(--surface); border: 1px solid var(--border); border-radius: 4px; padding: 3px 8px; color: var(--muted); }
+
+/* FILE:// WARNING BANNER */
+.protocol-banner {
+  display: none;
+  background: #1a0f00;
+  border: 1px solid rgba(255,179,71,0.5);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  margin-bottom: 28px;
+}
+.protocol-banner.visible { display: block; }
+.protocol-banner-title {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--amber);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.protocol-banner-body {
+  font-size: 12px;
+  color: #d4a855;
+  line-height: 1.7;
+  font-family: var(--font-body);
+}
+.protocol-banner-body strong { color: var(--amber); }
+.protocol-steps {
+  margin: 10px 0 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.protocol-steps li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 12px;
+  color: #d4a855;
+}
+.protocol-step-num {
+  background: rgba(255,179,71,0.15);
+  border: 1px solid rgba(255,179,71,0.3);
+  border-radius: 50%;
+  width: 20px; height: 20px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--amber);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.protocol-cmd {
+  display: inline-block;
+  background: rgba(0,0,0,0.4);
+  border: 1px solid rgba(255,179,71,0.2);
+  border-radius: 5px;
+  padding: 2px 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent);
+  cursor: pointer;
+  user-select: all;
+  transition: border-color 0.15s;
+}
+.protocol-cmd:hover { border-color: var(--accent); }
+.protocol-cmd:active { background: rgba(200,245,86,0.1); }
+.conn-test-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255,179,71,0.15);
+}
+.btn-conn-test {
+  background: transparent;
+  border: 1px solid rgba(255,179,71,0.4);
+  border-radius: 7px;
+  padding: 7px 16px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--amber);
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.btn-conn-test:hover { background: rgba(255,179,71,0.1); border-color: var(--amber); }
+.conn-test-result {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted2);
+}
+.conn-test-result.ok  { color: var(--green); }
+.conn-test-result.err { color: var(--red); }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- FILE:// PROTOCOL WARNING BANNER -->
+  <div class="protocol-banner" id="protocol-banner">
+    <div class="protocol-banner-title">⚠️ Chrome bloquea las llamadas a la API desde archivos locales</div>
+    <div class="protocol-banner-body">
+      Estás abriendo la app con el protocolo <strong>file://</strong> en Chrome, que bloquea las requests externas por seguridad. Tenés dos opciones:
+      <ul class="protocol-steps">
+        <li>
+          <span class="protocol-step-num">1</span>
+          <span><strong>Servidor local (recomendado):</strong> Abrí una terminal en la carpeta donde está el HTML y ejecutá:<br>
+          <span class="protocol-cmd" title="Click para copiar" onclick="navigator.clipboard.writeText('python3 -m http.server 8080').then(()=>this.textContent='¡Copiado!').catch(()=>{});setTimeout(()=>this.textContent='python3 -m http.server 8080',2000)">python3 -m http.server 8080</span>
+          &nbsp;luego abrí <span class="protocol-cmd" onclick="window.open('http://localhost:8080','_blank')">http://localhost:8080</span> en Chrome.</span>
+        </li>
+        <li>
+          <span class="protocol-step-num">2</span>
+          <span><strong>Usá Firefox:</strong> Abrí el mismo archivo HTML en Firefox — no tiene esta restricción y funciona directo.</span>
+        </li>
+      </ul>
+      <div class="conn-test-row">
+        <button class="btn-conn-test" onclick="testConnection()">▶ Probar conexión ahora</button>
+        <span class="conn-test-result" id="conn-test-result"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- HEADER -->
+  <header>
+    <div class="header-left">
+      <div class="logo">
+        <div class="logo-mark">AP</div>
+        <span class="logo-text">Finance Ops</span>
+      </div>
+      <h1>AP Statement<br><span>Reconciliation</span></h1>
+      <p class="sub">Parsea un statement nuevo, o cargá un Excel ya reconciliado — y cruzalo opcionalmente con NS Open Items para agregar el Tab 3.</p>
+    </div>
+    <div class="api-badge" onclick="toggleApiPanel()" title="Configure API Key">
+      <div class="api-dot" id="api-dot"></div>
+      <span class="api-badge-text" id="api-badge-text">API Key</span>
+    </div>
+  </header>
+
+  <!-- API KEY PANEL -->
+  <div class="api-panel" id="api-panel">
+    <label>Anthropic API Key</label>
+    <div class="api-input-row">
+      <input class="api-input" type="password" id="api-key-input" placeholder="sk-ant-api03-..." autocomplete="off">
+      <button class="btn-save" onclick="saveApiKey()">Save</button>
+    </div>
+    <p class="api-hint">Your key is stored only in your browser's localStorage. Never shared. Get one at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a></p>
+  </div>
+
+  <!-- ─── STEP 1 ─── -->
+  <div class="step-label">
+    <div class="step-num active" id="step1-num">1</div>
+    <span class="step-title">Reconciliation — nuevo o existente</span>
+  </div>
+
+  <!-- MODE TOGGLE -->
+  <div class="mode-toggle">
+    <button class="mode-btn active" id="mode-btn-new" onclick="setMode('new')">✦ Nueva reconciliación</button>
+    <button class="mode-btn" id="mode-btn-load" onclick="setMode('load')">↑ Cargar Excel existente</button>
+  </div>
+
+  <!-- MODE A: NEW RECONCILIATION -->
+  <div id="panel-new">
+    <div class="upload-grid">
+      <div class="upload-zone" id="zone-stmt" ondragover="onDrag(event,'stmt')" ondragleave="offDrag('stmt')" ondrop="onDrop(event,'stmt')" onclick="document.getElementById('file-stmt').click()">
+        <input type="file" id="file-stmt" accept=".pdf,.xlsx,.xls,.csv" multiple onchange="onFileChange(this,'stmt')" style="display:none">
+        <div class="zone-check" id="check-stmt"></div>
+        <span class="zone-icon">📄</span>
+        <div class="zone-tag vendor">Vendor Statement</div>
+        <div class="zone-title">Drop or click to upload</div>
+        <div class="zone-desc">PDF o Excel — soporta múltiples archivos por vendor</div>
+        <div class="file-chips" id="chips-stmt"></div>
+        <div class="zone-hint" id="hint-stmt" style="display:none">Click or drop to add more files</div>
+      </div>
+      <label class="upload-zone" id="zone-bills" ondragover="onDrag(event,'bills')" ondragleave="offDrag('bills')" ondrop="onDrop(event,'bills')">
+        <input type="file" id="file-bills" accept=".xlsx,.xls" onchange="onFileChange(this,'bills')">
+        <div class="zone-check" id="check-bills"></div>
+        <span class="zone-icon">📊</span>
+        <div class="zone-tag bills">Bills — your system</div>
+        <div class="zone-title">Drop or click to upload</div>
+        <div class="zone-desc">AllBillsPage Excel</div>
+        <div class="zone-file" id="name-bills"></div>
+      </label>
+      <div class="upload-zone credits-style" id="zone-credits" ondragover="onDrag(event,'credits')" ondragleave="offDrag('credits')" ondrop="onDrop(event,'credits')" onclick="document.getElementById('file-credits').click()">
+        <input type="file" id="file-credits" accept=".xlsx,.xls" onchange="onFileChange(this,'credits')" style="display:none">
+        <div class="zone-check amber-check" id="check-credits"></div>
+        <span class="zone-icon">🔖</span>
+        <div class="zone-tag credits">Vendor Credits</div>
+        <div class="zone-title">Drop or click to upload</div>
+        <div class="zone-desc">Excel de credits por vendor <span style="color:var(--muted);font-size:11px">(opcional)</span></div>
+        <div class="zone-file" id="name-credits"></div>
+      </div>
+    </div>
+    <div class="credits-status" id="credits-status">
+      <span class="credits-status-dot"></span>
+      <span id="credits-status-text"></span>
+    </div>
+    <div class="credits-vendor-selector-wrap" id="credits-vendor-selector-wrap">
+      <label>Vendors en Credits — seleccioná uno o más <span style="font-weight:400;color:var(--muted);font-size:10px">(Ctrl/Cmd + click para selección múltiple)</span></label>
+      <select class="vendor-select credits-vendor-select" id="credits-vendor-select" multiple onchange="onCreditsVendorSelectChange()"></select>
+      <div class="credits-vendor-count" id="credits-vendor-count"></div>
+    </div>
+    <button class="run-btn" id="run-btn" onclick="runReconciliation()">Run Reconciliation</button>
+  </div>
+
+  <!-- MODE B: LOAD EXISTING EXCEL -->
+  <div id="panel-load" style="display:none">
+    <div class="upload-zone existing-style" id="zone-existing"
+         ondragover="onDrag(event,'existing')" ondragleave="offDrag('existing')" ondrop="onDrop(event,'existing')"
+         onclick="document.getElementById('file-existing').click()"
+         style="max-width:520px">
+      <input type="file" id="file-existing" accept=".xlsx,.xls" onchange="onFileChange(this,'existing')" style="display:none">
+      <div class="zone-check accent-check" id="check-existing"></div>
+      <span class="zone-icon">📂</span>
+      <div class="zone-tag existing">Excel Reconciliado</div>
+      <div class="zone-title">Drop or click to upload</div>
+      <div class="zone-desc">Excel generado por esta app — Tab "Statement" + Tab "Bills Reference"</div>
+      <div class="zone-file" id="name-existing"></div>
+    </div>
+    <div class="existing-status" id="existing-status">
+      <span class="existing-status-dot"></span>
+      <span id="existing-status-text"></span>
+    </div>
+  </div>
+
+  <!-- LOG -->
+  <div class="log-box" id="log-box">
+    <div class="log-line"><span class="log-dot info"></span><span class="log-text info">Waiting for files...</span></div>
+  </div>
+
+  <!-- ─── STEP 2 ─── -->
+  <hr class="step-divider">
+
+  <div class="step-label">
+    <div class="step-num" id="step2-num">2</div>
+    <span class="step-title">NS Open Items — Cross-reference &nbsp;<span style="font-weight:400;color:var(--muted);font-size:11px">(opcional — agrega Tab 3 al Excel)</span></span>
+  </div>
+
+  <div class="upload-zone ns-style" id="zone-ns"
+       style="max-width:480px"
+       ondragover="onDrag(event,'ns')" ondragleave="offDrag('ns')" ondrop="onDrop(event,'ns')"
+       onclick="document.getElementById('file-ns').click()">
+    <input type="file" id="file-ns" accept=".xls,.xlsx" onchange="onFileChange(this,'ns')" style="display:none">
+    <div class="zone-check purple-check" id="check-ns"></div>
+    <span class="zone-icon">🗂️</span>
+    <div class="zone-tag ns">NS Open Items</div>
+    <div class="zone-title">Drop or click to upload</div>
+    <div class="zone-desc">AllOpenItemsDetail A/P — export semanal de NetSuite</div>
+    <div class="zone-file" id="name-ns"></div>
+  </div>
+
+  <div class="ns-status" id="ns-status">
+    <span class="ns-status-dot"></span>
+    <span id="ns-status-text"></span>
+  </div>
+
+  <div class="vendor-selector-wrap" id="vendor-selector-wrap">
+    <label>Vendors en NS — seleccioná uno o más <span style="font-weight:400;color:var(--muted);font-size:10px">(Ctrl/Cmd + click para selección múltiple)</span></label>
+    <select class="vendor-select" id="vendor-select" multiple onchange="onVendorSelectChange()"></select>
+    <div class="vendor-select-count" id="vendor-select-count"></div>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="results" style="margin-top:28px">
+    <div class="section-title" id="result-vendor-name">Summary</div>
+    <div class="metrics" id="metrics"></div>
+    <div class="table-section">
+      <div class="section-title">Reconciled Statement</div>
+      <div class="table-wrap"><table id="preview-table"></table></div>
+    </div>
+    <div class="actions">
+      <button class="btn-download" id="btn-download" onclick="downloadExcel()">↓ Download Excel</button>
+      <button class="btn-reset" onclick="resetAll()">Start Over</button>
+    </div>
+  </div>
+
+  <footer>
+    <span class="footer-text">Finance Ops · AP Reconciliation Tool</span>
+    <span class="footer-badge">v3.0</span>
+  </footer>
+</div>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let appMode = 'new'; // 'new' | 'load'
+let stmtFiles = [], billsFile = null, nsFile = null, existingFile = null, creditsFile = null;
+let reconciled = [], billsLookup = {}, billsAllRows = [], billsHeaders = [];
+let creditsData = [], creditsLookup = {}; // ref# (normalized) → {amount, appliedAmount, status, date, vendor}
+let creditsAllData = [], creditsSelectedVendors = []; // for vendor selector
+let vendorName = '', parsedStatements = [];
+let nsAllRows = [], nsHeaders = [], nsVendorRows = [], nsSelectedVendors = []; // array of selected vendor names
+// For existing Excel mode — we keep the original sheets to re-export them unchanged
+let existingSheet1 = null, existingSheet2 = null;
+
+// ─── MODE TOGGLE ─────────────────────────────────────────────────────────────
+function setMode(mode) {
+  appMode = mode;
+  document.getElementById('panel-new').style.display  = mode === 'new'  ? '' : 'none';
+  document.getElementById('panel-load').style.display = mode === 'load' ? '' : 'none';
+  document.getElementById('mode-btn-new').className  = 'mode-btn' + (mode === 'new'  ? ' active' : '');
+  document.getElementById('mode-btn-load').className = 'mode-btn' + (mode === 'load' ? ' active load-mode' : '');
+  // Clear results when switching
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('log-box').innerHTML =
+    '<div class="log-line"><span class="log-dot info"></span><span class="log-text info">Waiting for files...</span></div>';
+  checkReady();
+}
+
+// ─── API KEY ──────────────────────────────────────────────────────────────────
+function loadApiKey() {
+  const k = localStorage.getItem('cu_api_key') || '';
+  document.getElementById('api-key-input').value = k;
+  updateApiStatus(k);
+  return k;
+}
+function saveApiKey() {
+  const k = document.getElementById('api-key-input').value.trim();
+  localStorage.setItem('cu_api_key', k);
+  updateApiStatus(k);
+  document.getElementById('api-panel').classList.remove('open');
+}
+function updateApiStatus(k) {
+  const dot = document.getElementById('api-dot');
+  const txt = document.getElementById('api-badge-text');
+  if (k && k.startsWith('sk-ant')) {
+    dot.classList.add('connected');
+    txt.textContent = '···' + k.slice(-6);
+  } else {
+    dot.classList.remove('connected');
+    txt.textContent = 'Set API Key';
+  }
+}
+function toggleApiPanel() {
+  document.getElementById('api-panel').classList.toggle('open');
+}
+
+// ─── FILE HANDLING ─────────────────────────────────────────────────────────────
+function onFileChange(input, which) {
+  const files = Array.from(input.files); if (!files.length) return;
+  files.forEach(f => addFile(f, which));
+  input.value = '';
+}
+function onDrag(e, which) { e.preventDefault(); document.getElementById('zone-'+which).classList.add('dragging'); }
+function offDrag(which) { document.getElementById('zone-'+which).classList.remove('dragging'); }
+function onDrop(e, which) {
+  e.preventDefault(); e.stopPropagation(); offDrag(which);
+  Array.from(e.dataTransfer.files).forEach(f => addFile(f, which));
+}
+
+function addFile(f, which) {
+  if (which === 'bills') {
+    billsFile = f;
+    setZoneFile('bills', f.name);
+  } else if (which === 'credits') {
+    creditsFile = f;
+    setZoneFile('credits', f.name);
+    loadCreditsFile(f);
+  } else if (which === 'ns') {
+    nsFile = f;
+    setZoneFile('ns', f.name);
+    processNSFile(f);
+  } else if (which === 'existing') {
+    existingFile = f;
+    setZoneFile('existing', f.name);
+    loadExistingExcel(f);
+  } else {
+    if (stmtFiles.find(x => x.name === f.name)) return;
+    stmtFiles.push(f);
+    renderStmtChips();
+  }
+  checkReady();
+}
+
+function setZoneFile(which, name) {
+  const nameEl = document.getElementById('name-' + which);
+  const checkEl = document.getElementById('check-' + which);
+  const zoneEl = document.getElementById('zone-' + which);
+  if (nameEl) { nameEl.textContent = name; nameEl.classList.add('visible'); }
+  if (checkEl) checkEl.classList.add('visible');
+  if (zoneEl) zoneEl.classList.add('has-file');
+}
+
+function removeStmtFile(name) {
+  stmtFiles = stmtFiles.filter(f => f.name !== name);
+  renderStmtChips();
+  checkReady();
+}
+function renderStmtChips() {
+  const container = document.getElementById('chips-stmt');
+  const hint = document.getElementById('hint-stmt');
+  const check = document.getElementById('check-stmt');
+  const zone = document.getElementById('zone-stmt');
+  if (!stmtFiles.length) {
+    container.innerHTML = ''; hint.style.display = 'none';
+    check.classList.remove('visible'); zone.classList.remove('has-file');
+    return;
+  }
+  zone.classList.add('has-file'); check.classList.add('visible'); hint.style.display = 'block';
+  container.innerHTML = stmtFiles.map((f, i) => {
+    const locLabel = stmtFiles.length > 1 ? `LOC ${i+1}` : 'FILE';
+    const shortName = f.name.length > 22 ? f.name.slice(0,19)+'...' : f.name;
+    return `<span class="chip">
+      <span class="chip-loc">${locLabel}</span>
+      <span class="chip-name" title="${f.name}">${shortName}</span>
+      <span class="chip-remove" onclick="event.stopPropagation();removeStmtFile('${f.name.replace(/'/g,"\\'")}')">×</span>
+    </span>`;
+  }).join('');
+}
+
+function checkReady() {
+  const btn = document.getElementById('run-btn');
+  if (!btn) return;
+  const ready = appMode === 'new' ? (stmtFiles.length > 0 && billsFile !== null) : false;
+  btn.className = 'run-btn' + (ready ? ' ready' : '');
+}
+
+// ─── LOG ──────────────────────────────────────────────────────────────────────
+function log(msg, type = 'info') {
+  const box = document.getElementById('log-box');
+  if (box.innerHTML.includes('Waiting for files')) box.innerHTML = '';
+  box.innerHTML += `<div class="log-line"><span class="log-dot ${type}"></span><span class="log-text ${type}">${msg}</span></div>`;
+  box.scrollTop = box.scrollHeight;
+}
+
+// ─── CREDITS CSV READER ──────────────────────────────────────────────────────────────────────────────
+async function loadCreditsFile(file) {
+  const statusEl   = document.getElementById('credits-status');
+  const statusText = document.getElementById('credits-status-text');
+  statusEl.className = 'credits-status visible warn';
+  statusText.textContent = 'Leyendo credits...';
+  try {
+    // Support both CSV and Excel
+    let rows = [];
+    const isExcel = /\.(xlsx|xls)$/i.test(file.name);
+    if (isExcel) {
+      rows = await new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload = e => {
+          try {
+            const wb = XLSX.read(e.target.result, { type: 'array', raw: false });
+            const ws = wb.Sheets[wb.SheetNames[0]];
+            const data = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: '' });
+            res(data.filter(row => row.some(c => c !== '')));
+          } catch(ex) { rej(ex); }
+        };
+        r.onerror = rej;
+        r.readAsArrayBuffer(file);
+      });
+    } else {
+      const text = await file.text();
+      rows = parseCSV(text);
+    }
+
+    if (!rows.length) throw new Error('Archivo vacío o formato inválido');
+    const headers = rows[0].map(h => String(h).trim());
+
+    // Log detected headers so user can see what came in
+    log('Credits headers detectados: ' + headers.join(' | '), 'info');
+
+    const iVendor = headers.findIndex(h => /vendor.*(name)?/i.test(h));
+
+    // Ref column: accept many common names
+    const iRef = headers.findIndex(h =>
+      /ref\s*#/i.test(h) ||
+      /^ref$/i.test(h) ||
+      /reference/i.test(h) ||
+      /doc(ument)?\s*(no|num|#|number)/i.test(h) ||
+      /invoice\s*(no|num|#|number)/i.test(h) ||
+      /credit\s*(no|num|#|number|memo)/i.test(h) ||
+      /^number$/i.test(h) ||
+      /^no\.?$/i.test(h)
+    );
+
+    const iAmt  = headers.findIndex(h => /^amount$/i.test(h) || /credit.?amount/i.test(h) || /total/i.test(h));
+    const iAppl = headers.findIndex(h => /applied.?amount/i.test(h));
+    const iSt   = headers.findIndex(h => /^status$/i.test(h));
+    const iDate = headers.findIndex(h => /credit.?date/i.test(h) || /^date$/i.test(h));
+
+    if (iRef === -1) {
+      throw new Error(
+        `No se encontró columna de referencia/número en el archivo. Columnas detectadas: ${headers.join(', ')}. ` +
+        `Se aceptan: "Ref #", "Reference", "Document Number", "Invoice No", "Credit No", "Number", "No."`
+      );
+    }
+
+    creditsAllData = [];
+    for (let i = 1; i < rows.length; i++) {
+      const row = rows[i];
+      const ref    = String(row[iRef]    || '').trim();
+      const vendor = iVendor !== -1 ? String(row[iVendor] || '').trim() : '';
+      const amt    = iAmt  !== -1 ? parseFloat(String(row[iAmt]  || '').replace(/[",\$]/g,'')) || 0 : 0;
+      const appl   = iAppl !== -1 ? parseFloat(String(row[iAppl] || '').replace(/[",\$]/g,'')) || 0 : 0;
+      const status = iSt   !== -1 ? String(row[iSt]   || '').trim() : '';
+      const date   = iDate !== -1 ? String(row[iDate]  || '').trim() : '';
+      if (!ref) continue;
+      creditsAllData.push({ ref, vendor, amount: amt, appliedAmount: appl, status, date });
+    }
+
+    // Vendor selector
+    const uniqueCreditsVendors = [...new Set(creditsAllData.map(e => e.vendor).filter(Boolean))].sort();
+    const credSelWrap = document.getElementById('credits-vendor-selector-wrap');
+    if (uniqueCreditsVendors.length > 0) {
+      const autoMatch = vendorName ? findBestVendorMatch(vendorName, uniqueCreditsVendors) : null;
+      creditsSelectedVendors = autoMatch ? [autoMatch] : [uniqueCreditsVendors[0]];
+      const sel = document.getElementById('credits-vendor-select');
+      sel.innerHTML = uniqueCreditsVendors.map(v =>
+        `<option value="${escAttr(v)}" ${creditsSelectedVendors.includes(v) ? 'selected' : ''}>${v}</option>`
+      ).join('');
+      credSelWrap.classList.add('visible');
+      const matchInfo = autoMatch ? ` — auto-matched a "${autoMatch}"` : '';
+      const filteredCount = creditsAllData.filter(e => creditsSelectedVendors.includes(e.vendor)).length;
+      document.getElementById('credits-vendor-count').textContent =
+        `✓ ${creditsSelectedVendors.length} vendor seleccionado · ${filteredCount} credits en total`;
+      log(`Credits: ${creditsAllData.length} registros · ${uniqueCreditsVendors.length} vendor(s) detectado(s)${matchInfo}.`, 'warn');
+    } else {
+      creditsSelectedVendors = [];
+      credSelWrap.classList.remove('visible');
+      log(`Credits: ${creditsAllData.length} registros cargados (columna ref usada: "${headers[iRef]}").`, 'warn');
+    }
+
+    rebuildCreditsLookup();
+    statusEl.className = 'credits-status visible ok';
+    statusText.textContent = `✓ ${creditsAllData.length} credits cargados · columna ref: "${headers[iRef]}"${uniqueCreditsVendors.length > 0 ? ' · elegí el vendor antes de correr' : ''}`;
+  } catch(err) {
+    statusEl.className = 'credits-status visible warn';
+    statusText.textContent = `Error leyendo credits: ${err.message}`;
+    log(`Error credits: ${err.message}`, 'err');
+  }
+}
+
+function parseCSV(text) {
+  const rows = [];
+  const lines = text.split(/\r?\n/);
+  for (const line of lines) {
+    if (!line.trim()) continue;
+    const row = [];
+    let cur = '', inQ = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') {
+        if (inQ && line[i+1] === '"') { cur += '"'; i++; }
+        else inQ = !inQ;
+      } else if (ch === ',' && !inQ) { row.push(cur); cur = ''; }
+      else cur += ch;
+    }
+    row.push(cur);
+    rows.push(row);
+  }
+  return rows;
+}
+
+function rebuildCreditsLookup() {
+  const normRef = k => String(k).replace(/^#/, '').toLowerCase().replace(/\s+/g,'').replace(/^0+/,'').trim();
+  const uniqueVendors = [...new Set(creditsAllData.map(e => e.vendor).filter(Boolean))];
+  const filtered = (uniqueVendors.length > 0 && creditsSelectedVendors.length > 0)
+    ? creditsAllData.filter(e => creditsSelectedVendors.includes(e.vendor))
+    : creditsAllData;
+  creditsData = filtered;
+  creditsLookup = {};
+  filtered.forEach(entry => {
+    const nk = normRef(entry.ref);
+    if (!creditsLookup[nk]) creditsLookup[nk] = [];
+    creditsLookup[nk].push(entry);
+  });
+}
+
+function onCreditsVendorSelectChange() {
+  const sel = document.getElementById('credits-vendor-select');
+  creditsSelectedVendors = Array.from(sel.selectedOptions).map(o => o.value);
+  rebuildCreditsLookup();
+  const countEl = document.getElementById('credits-vendor-count');
+  if (creditsSelectedVendors.length === 0) {
+    countEl.textContent = 'Seleccioná al menos un vendor para activar el cruce de credits.';
+  } else {
+    const filtered = creditsAllData.filter(e => creditsSelectedVendors.includes(e.vendor));
+    countEl.textContent = `✓ ${creditsSelectedVendors.length} vendor${creditsSelectedVendors.length > 1 ? 's' : ''} seleccionado${creditsSelectedVendors.length > 1 ? 's' : ''} · ${filtered.length} credits en total`;
+  }
+}
+
+function getCreditMatch(invoiceNo, currentVendor) {
+  if (!invoiceNo || !Object.keys(creditsLookup).length) return null;
+  const normRef = k => String(k).replace(/^#/, '').toLowerCase().replace(/\s+/g,'').trim();
+  const normVendor = s => s.toLowerCase().replace(/[^a-z0-9]/g,'');
+  const nk = normRef(invoiceNo);
+  const matches = creditsLookup[nk];
+  if (!matches) return null;
+  const nv = normVendor(currentVendor || '');
+  const filtered = nv
+    ? matches.filter(m => normVendor(m.vendor).includes(nv) || nv.includes(normVendor(m.vendor)))
+    : matches;
+  return filtered.length ? filtered[0] : matches[0];
+}
+
+// ─── BILLS READER ─────────────────────────────────────────────────────────────
+async function readBills(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = e => {
+      try {
+        const wb = XLSX.read(e.target.result, { type: 'array' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
+        billsHeaders = data[0].map(h => String(h || ''));
+        billsAllRows = data;
+        const invIdx = billsHeaders.findIndex(h => h.toLowerCase().includes('invoice no'));
+        const stIdx  = billsHeaders.findIndex(h => h.toLowerCase().includes('payment status'));
+        if (invIdx === -1 || stIdx === -1) throw new Error('Bills file: missing "Invoice no." or "Payment status" columns');
+        const lookup = {};
+        for (let i = 1; i < data.length; i++) {
+          const inv = String(data[i][invIdx] || '').trim();
+          const st  = String(data[i][stIdx]  || '').trim();
+          if (inv) lookup[inv] = st;
+        }
+        res(lookup);
+      } catch(err) { rej(err); }
+    };
+    r.onerror = rej;
+    r.readAsArrayBuffer(file);
+  });
+}
+
+// ─── EXCEL TO CSV ─────────────────────────────────────────────────────────────
+async function xlsxToCSV(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = e => {
+      const wb = XLSX.read(e.target.result, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      res(XLSX.utils.sheet_to_csv(ws));
+    };
+    r.onerror = rej;
+    r.readAsArrayBuffer(file);
+  });
+}
+
+// ─── LOAD EXISTING EXCEL ──────────────────────────────────────────────────────
+async function loadExistingExcel(file) {
+  const statusEl   = document.getElementById('existing-status');
+  const statusText = document.getElementById('existing-status-text');
+  statusEl.className = 'existing-status visible warn';
+  statusText.textContent = 'Leyendo Excel...';
+
+  try {
+    await new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = e => {
+        try {
+          const wb = XLSX.read(e.target.result, { type: 'array', raw: false });
+
+          // ── Find Statement sheet ──
+          const stmtSheetName = wb.SheetNames.find(n =>
+            n.toLowerCase().includes('statement')
+          ) || wb.SheetNames[0];
+          const billsSheetName = wb.SheetNames.find(n =>
+            n.toLowerCase().includes('bills')
+          ) || wb.SheetNames[1];
+
+          const wsStmt  = wb.Sheets[stmtSheetName];
+          const wsBills = billsSheetName ? wb.Sheets[billsSheetName] : null;
+
+          // Keep originals for re-export
+          existingSheet1 = wsStmt;
+          existingSheet2 = wsBills;
+
+          const stmtData  = XLSX.utils.sheet_to_json(wsStmt,  { header: 1, raw: false, defval: '' });
+          const billsData = wsBills ? XLSX.utils.sheet_to_json(wsBills, { header: 1, raw: false, defval: '' }) : [];
+
+          // ── Extract vendorName from cell A1: "Vendor Statement — VendorName" ──
+          const titleCell = String(stmtData[0]?.[0] || '');
+          const dashIdx = titleCell.indexOf(' — ');
+          const extractedVendor = dashIdx !== -1 ? titleCell.slice(dashIdx + 3).trim() : titleCell.trim();
+          vendorName = extractedVendor || 'Vendor';
+
+          // Auto-match credits vendor if credits file was already loaded
+          if (creditsAllData.length > 0) {
+            const uniqueCreditsVendors = [...new Set(creditsAllData.map(e => e.vendor).filter(Boolean))];
+            if (uniqueCreditsVendors.length > 0) {
+              const autoMatch = findBestVendorMatch(vendorName, uniqueCreditsVendors);
+              if (autoMatch && !creditsSelectedVendors.includes(autoMatch)) {
+                creditsSelectedVendors = [autoMatch];
+                Array.from(document.getElementById('credits-vendor-select').options).forEach(o => {
+                  o.selected = creditsSelectedVendors.includes(o.value);
+                });
+                rebuildCreditsLookup();
+                document.getElementById('credits-vendor-count').textContent =
+                  `✓ 1 vendor seleccionado · ${creditsData.length} credits en total`;
+              }
+            }
+          }
+
+          // ── Find header row (has "Invoice No." or "Date") ──
+          let hdrIdx = -1;
+          for (let i = 0; i < Math.min(10, stmtData.length); i++) {
+            const row = stmtData[i];
+            const hasInv = row.some(c => String(c).toLowerCase().includes('invoice'));
+            const hasDate = row.some(c => String(c).toLowerCase() === 'date');
+            if (hasInv && hasDate) { hdrIdx = i; break; }
+          }
+          if (hdrIdx === -1) throw new Error('No se encontró fila de encabezados en el Tab Statement. ¿Es este un Excel generado por esta app?');
+
+          const headers = stmtData[hdrIdx].map(h => String(h).trim());
+          const iDate   = headers.findIndex(h => h.toLowerCase() === 'date');
+          const iType   = headers.findIndex(h => h.toLowerCase().includes('transaction type') || h.toLowerCase() === 'type');
+          const iDet    = headers.findIndex(h => h.toLowerCase().includes('detail'));
+          const iInv    = headers.findIndex(h => h.toLowerCase().includes('invoice'));
+          const iLoc    = headers.findIndex(h => h.toLowerCase().includes('location'));
+          const iAmt    = headers.findIndex(h => h.toLowerCase().includes('amount'));
+          const iPay    = headers.findIndex(h => h.toLowerCase().includes('payment'));
+          const iBal    = headers.findIndex(h => h.toLowerCase().includes('balance'));
+          const iBill   = headers.findIndex(h => h.toLowerCase() === 'bill');
+
+          if (iInv === -1) throw new Error('Columna "Invoice No." no encontrada en Tab Statement.');
+
+          reconciled = [];
+          for (let i = hdrIdx + 1; i < stmtData.length; i++) {
+            const row = stmtData[i];
+            if (!row || row.every(c => c === '' || c === null)) continue;
+            // Skip totals row (4th data cell says "TOTAL")
+            const invVal = String(row[iInv] || '').trim();
+            if (invVal.toUpperCase() === 'TOTAL' || invVal === '') continue;
+
+            reconciled.push({
+              date:        iDate  !== -1 ? String(row[iDate]  || '') : '',
+              type:        iType  !== -1 ? String(row[iType]  || '') : 'Invoice',
+              details:     iDet   !== -1 ? String(row[iDet]   || '') : '',
+              invoice_no:  invVal,
+              location:    iLoc   !== -1 ? String(row[iLoc]   || '') : '',
+              amount:      iAmt   !== -1 ? parseFloat(row[iAmt])  || 0 : 0,
+              payments:    iPay   !== -1 ? parseFloat(row[iPay])  || 0 : 0,
+              balance:     iBal   !== -1 ? parseFloat(row[iBal])  || 0 : 0,
+              bill_status: iBill  !== -1 ? String(row[iBill]  || '') : ''
+            });
+          }
+
+          // ── Rebuild billsLookup from Bills Reference tab ──
+          billsLookup = {};
+          if (billsData.length > 1) {
+            const bHdrs = billsData[0].map(h => String(h).toLowerCase());
+            const bInv  = bHdrs.findIndex(h => h.includes('invoice'));
+            const bSt   = bHdrs.findIndex(h => h.includes('status') || h.includes('payment'));
+            if (bInv !== -1 && bSt !== -1) {
+              for (let i = 1; i < billsData.length; i++) {
+                const k = String(billsData[i][bInv] || '').trim();
+                const v = String(billsData[i][bSt]  || '').trim();
+                if (k) billsLookup[k] = v;
+              }
+            }
+          }
+
+          // Apply credits if loaded
+          reconciled.forEach(r => {
+            const creditMatch = getCreditMatch(String(r.invoice_no || '').trim(), vendorName);
+            r.credit_info = creditMatch
+              ? { ref: creditMatch.ref, amount: creditMatch.amount, appliedAmount: creditMatch.appliedAmount, status: creditMatch.status, date: creditMatch.date }
+              : null;
+          });
+
+          // parsedStatements needed for totals — build a minimal proxy
+          parsedStatements = [{
+            vendor_name: vendorName,
+            statement_date: '',
+            total_due: reconciled.reduce((s, r) => s + (r.balance || 0), 0),
+            transactions: reconciled
+          }];
+
+          res();
+        } catch(err) { rej(err); }
+      };
+      r.onerror = rej;
+      r.readAsArrayBuffer(file);
+    });
+
+    statusEl.className = 'existing-status visible ok';
+    statusText.textContent = `"${vendorName}" — ${reconciled.length} filas cargadas desde Tab Statement.`;
+    log(`Excel existente cargado: "${vendorName}" — ${reconciled.length} transacciones.`, 'ok');
+
+    // Re-run NS vendor match if NS already loaded
+    if (nsAllRows.length > 0) {
+      const uniqueVendors = [...new Set(nsAllRows.map(r => r['Name']).filter(Boolean))];
+      const autoMatch = findBestVendorMatch(vendorName, uniqueVendors);
+      if (autoMatch) {
+        nsSelectedVendors = [autoMatch];
+        nsVendorRows = nsAllRows.filter(r => nsSelectedVendors.includes(r['Name']));
+        // Update select: deselect all, then select matched
+        Array.from(document.getElementById('vendor-select').options).forEach(o => {
+          o.selected = nsSelectedVendors.includes(o.value);
+        });
+        document.getElementById('vendor-select-count').textContent =
+          `✓ 1 vendor seleccionado · ${nsVendorRows.length} filas en total`;
+        document.getElementById('ns-status-text').textContent =
+          `${nsAllRows.length} filas · ${nsVendorRows.length} filas para "${autoMatch}" (auto-matched)`;
+        log(`NS: ${nsVendorRows.length} filas para vendor(s) seleccionado(s).`, 'ns');
+      }
+    }
+
+    log('Preview listo. Subí el NS Open Items para agregar el Tab 3, o descargá directamente.', 'done');
+
+    // Mark step 1 done
+    const s1 = document.getElementById('step1-num');
+    s1.classList.remove('active'); s1.classList.add('done');
+
+    renderResults();
+
+  } catch(err) {
+    statusEl.className = 'existing-status visible err';
+    statusText.textContent = `Error: ${err.message}`;
+    log(`Error cargando Excel: ${err.message}`, 'err');
+    console.error(err);
+  }
+}
+
+// ─── NS FILE ──────────────────────────────────────────────────────────────────
+async function processNSFile(file) {
+  const statusEl   = document.getElementById('ns-status');
+  const statusText = document.getElementById('ns-status-text');
+  const selWrap    = document.getElementById('vendor-selector-wrap');
+  statusEl.className = 'ns-status visible warn';
+  statusText.textContent = 'Leyendo archivo NS...';
+  selWrap.classList.remove('visible');
+
+  try {
+    await readNSFile(file);
+    const uniqueVendors = [...new Set(nsAllRows.map(r => r['Name']).filter(Boolean))].sort();
+    if (!uniqueVendors.length) {
+      statusEl.className = 'ns-status visible warn';
+      statusText.textContent = `${nsAllRows.length} filas cargadas — no se detectaron vendor names.`;
+      return;
+    }
+
+    const autoMatch = vendorName ? findBestVendorMatch(vendorName, uniqueVendors) : null;
+    nsSelectedVendors = autoMatch ? [autoMatch] : [uniqueVendors[0]];
+    nsVendorRows = nsAllRows.filter(r => nsSelectedVendors.includes(r['Name']));
+
+    const sel = document.getElementById('vendor-select');
+    sel.innerHTML = uniqueVendors.map(v =>
+      `<option value="${escAttr(v)}" ${nsSelectedVendors.includes(v) ? 'selected' : ''}>${v}</option>`
+    ).join('');
+    selWrap.classList.add('visible');
+
+    const countEl = document.getElementById('vendor-select-count');
+    countEl.textContent = `✓ ${nsSelectedVendors.length} vendor seleccionado · ${nsVendorRows.length} filas en total`;
+    const matchInfo = autoMatch ? ` — auto-matched a "${autoMatch}"` : '';
+    statusEl.className = 'ns-status visible ok';
+    statusText.textContent = `${nsAllRows.length} filas · ${nsVendorRows.length} filas para vendor(s) seleccionado(s)${matchInfo}`;
+    document.getElementById('step2-num').classList.add('active');
+    updateDownloadLabel();
+
+  } catch(err) {
+    statusEl.className = 'ns-status visible warn';
+    statusText.textContent = `Error leyendo NS: ${err.message}`;
+    console.error(err);
+  }
+}
+
+async function readNSFile(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = e => {
+      try {
+        const wb = XLSX.read(e.target.result, { type: 'array', raw: false });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const data = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: '' });
+
+        let hdrIdx = -1;
+        for (let i = 0; i < Math.min(20, data.length); i++) {
+          if (String(data[i][0] || '').trim() === 'Name') { hdrIdx = i; break; }
+        }
+        if (hdrIdx === -1) throw new Error('No se encontró fila de encabezado con columna "Name"');
+
+        nsHeaders = data[hdrIdx].map(h => String(h || '').trim());
+        nsAllRows = [];
+        let curName = '';
+
+        for (let i = hdrIdx + 1; i < data.length; i++) {
+          const row = data[i];
+          if (!row || row.every(c => c === '' || c === null || c === undefined)) continue;
+          const nameCell = String(row[0] || '').trim();
+          if (nameCell) curName = nameCell;
+
+          const obj = {};
+          nsHeaders.forEach((h, idx) => {
+            let val = String(row[idx] !== undefined ? row[idx] : '').trim();
+            if ((h === 'Date' || h === 'Due Date') && /^\d{4}-\d{2}-\d{2}/.test(val)) {
+              const p = val.slice(0, 10).split('-');
+              val = p[1] + '/' + p[2] + '/' + p[0];
+            }
+            obj[h] = val;
+          });
+          obj['Name'] = curName;
+          nsAllRows.push(obj);
+        }
+        res(nsAllRows);
+      } catch(e) { rej(e); }
+    };
+    r.onerror = rej;
+    r.readAsArrayBuffer(file);
+  });
+}
+
+function findBestVendorMatch(target, candidates) {
+  const norm = s => s.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
+  const nt = norm(target);
+  let m = candidates.find(c => norm(c) === nt);
+  if (m) return m;
+  m = candidates.find(c => norm(c).includes(nt) || nt.includes(norm(c)));
+  if (m) return m;
+  const tw = nt.split(' ').filter(w => w.length > 2);
+  let best = 0, bestC = null;
+  candidates.forEach(c => {
+    const cw = norm(c).split(' ').filter(w => w.length > 2);
+    const overlap = tw.filter(w => cw.includes(w)).length;
+    if (overlap > best) { best = overlap; bestC = c; }
+  });
+  return best >= 2 ? bestC : null;
+}
+
+function onVendorSelectChange() {
+  const sel = document.getElementById('vendor-select');
+  nsSelectedVendors = Array.from(sel.selectedOptions).map(o => o.value);
+  nsVendorRows = nsAllRows.filter(r => nsSelectedVendors.includes(r['Name']));
+  const countEl = document.getElementById('vendor-select-count');
+  if (nsSelectedVendors.length === 0) {
+    countEl.textContent = '';
+    document.getElementById('ns-status-text').textContent =
+      `${nsAllRows.length} filas cargadas — seleccioná al menos un vendor.`;
+  } else {
+    countEl.textContent = `✓ ${nsSelectedVendors.length} vendor${nsSelectedVendors.length > 1 ? 's' : ''} seleccionado${nsSelectedVendors.length > 1 ? 's' : ''} · ${nsVendorRows.length} filas en total`;
+    document.getElementById('ns-status-text').textContent =
+      `${nsAllRows.length} filas · ${nsVendorRows.length} filas para vendor(s) seleccionado(s)`;
+  }
+  updateDownloadLabel();
+}
+
+function updateDownloadLabel() {
+  const btn = document.getElementById('btn-download');
+  if (!btn) return;
+  btn.textContent = nsVendorRows && nsVendorRows.length > 0
+    ? '↓ Download Excel  (3 tabs — incl. NS)'
+    : '↓ Download Excel';
+}
+
+function escAttr(s) { return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;'); }
+
+// ─── CLAUDE PARSER ────────────────────────────────────────────────────────────
+async function parseWithClaude(file, locationLabel) {
+  const apiKey = localStorage.getItem('cu_api_key') || '';
+  if (!apiKey) throw new Error('No API key set. Click "Set API Key" in the top right.');
+  const isPDF = file.name.toLowerCase().endsWith('.pdf');
+
+  const prompt = 'You are a financial data extraction expert. Extract all invoice/transaction line items from this vendor statement.\n\nCRITICAL: Return ONLY raw JSON — no markdown, no backticks, no text before or after.\n\nUse this exact structure:\n{"vendor_name":"string","location":"location or branch name or empty string","total_due":0,"statement_date":"string","transactions":[{"date":"MM/DD/YYYY","type":"Invoice","details":"short details text","invoice_no":"bare identifier only e.g. 019197 or INV-019197","amount":0,"payments":0,"balance":0}]}\n\nRules:\n- invoice_no: ONLY the bare identifier, strip prefixes like INV#, Invoice:, etc.\n- details: keep short, no special characters, no line breaks inside strings\n- Exclude opening balance rows\n- Use 0 for missing numbers\n- All string values must be on one line with no unescaped quotes';
+
+  let messages;
+  if (isPDF) {
+    const b64 = await new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = e => res(e.target.result.split(',')[1]);
+      r.onerror = rej;
+      r.readAsDataURL(file);
+    });
+    messages = [{ role: 'user', content: [
+      { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: b64 } },
+      { type: 'text', text: prompt }
+    ]}];
+  } else {
+    let csv = await xlsxToCSV(file);
+    // Trim CSV to avoid hitting token limits (keep ~400 rows max)
+    const csvLines = csv.split('\n');
+    if (csvLines.length > 420) {
+      csv = csvLines.slice(0, 420).join('\n');
+      log(`Archivo grande: se enviaron las primeras 420 filas de ${csvLines.length} al parser.`, 'warn');
+    }
+    messages = [{ role: 'user', content: 'Vendor statement CSV:\n\n' + csv + '\n\n' + prompt }];
+  }
+
+  // ── Fetch with auto-retry on rate-limit (429) and network errors ────────────
+  const fetchOpts = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 8000, messages })
+  };
+
+  const doFetch = () => fetch('https://api.anthropic.com/v1/messages', fetchOpts);
+
+  let resp;
+  const MAX_ATTEMPTS = 4;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      resp = await doFetch();
+    } catch (networkErr) {
+      // "Failed to fetch" — network error or browser CORS block from file://
+      if (attempt < MAX_ATTEMPTS) {
+        const waitSec = attempt * 15;
+        log(`Error de red (intento ${attempt}/${MAX_ATTEMPTS}). Reintentando en ${waitSec}s...`, 'warn');
+        await new Promise(r => setTimeout(r, waitSec * 1000));
+        continue;
+      }
+      throw new Error(
+        'No se pudo conectar con la API de Anthropic. Posibles causas:\n' +
+        '1. Sin conexión a internet.\n' +
+        '2. Chrome bloquea llamadas de archivos locales (file://) — abrí el archivo desde un servidor local o usá Firefox.\n' +
+        '3. Verificá que tu API key sea válida.'
+      );
+    }
+
+    if (resp.status === 429) {
+      if (attempt < MAX_ATTEMPTS) {
+        const waitSec = attempt * 20;
+        log(`Rate limit alcanzado. Esperando ${waitSec}s antes de reintentar (intento ${attempt}/${MAX_ATTEMPTS})...`, 'warn');
+        await new Promise(r => setTimeout(r, waitSec * 1000));
+        continue;
+      }
+      throw new Error(
+        'Rate limit de la API alcanzado después de varios intentos. ' +
+        'Esperá 1 minuto y volvé a intentar, o upgradea tu plan en console.anthropic.com.'
+      );
+    }
+    break; // success or non-retryable error
+  }
+
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error(err.error?.message || 'API error ' + resp.status);
+  }
+
+  const data = await resp.json();
+  if (data.stop_reason === 'max_tokens')
+    log('Warning: response truncated for "' + file.name + '" — some transactions may be missing.', 'warn');
+
+  const raw = data.content.map(c => c.text || '').join('');
+  const firstBrace = raw.indexOf('{'), lastBrace = raw.lastIndexOf('}');
+  if (firstBrace === -1 || lastBrace === -1) throw new Error('No JSON in API response for "' + file.name + '"');
+  let clean = raw.slice(firstBrace, lastBrace + 1);
+  clean = clean
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '')
+    .replace(/,(\s*[}\]])/g, '$1')
+    .replace(/([{,]\s*)([a-zA-Z_]\w*)(\s*):/g, '$1"$2"$3:')
+    .replace(/:\s*'([^']*)'/g, ':"$1"');
+
+  let parsed;
+  try {
+    parsed = JSON.parse(clean);
+  } catch(e) {
+    const vendorMatch = clean.match(/"vendor_name"\s*:\s*"([^"]+)"/);
+    const locMatch    = clean.match(/"location"\s*:\s*"([^"]*)"/);
+    const dueMatch    = clean.match(/"total_due"\s*:\s*([\d.]+)/);
+    const dateMatch   = clean.match(/"statement_date"\s*:\s*"([^"]*)"/);
+    const txObjects   = [];
+    const txRe = /\{[^{}]*"invoice_no"[^{}]*\}/g;
+    let m;
+    while ((m = txRe.exec(clean)) !== null) {
+      try {
+        const fix = m[0].replace(/,(\s*[}\]])/g,'$1').replace(/([{,]\s*)([a-zA-Z_]\w*)(\s*):/g,'$1"$2"$3:');
+        txObjects.push(JSON.parse(fix));
+      } catch(ignored) {}
+    }
+    if (txObjects.length) {
+      parsed = { vendor_name: vendorMatch?.[1]||'Vendor', location: locMatch?.[1]||'', total_due: dueMatch?parseFloat(dueMatch[1]):0, statement_date: dateMatch?.[1]||'', transactions: txObjects };
+      log('Recovered ' + txObjects.length + ' transactions via fallback parser for "' + file.name + '".', 'warn');
+    } else {
+      throw new Error('Could not parse API response for "' + file.name + '". JSON error: ' + e.message);
+    }
+  }
+  parsed._locationLabel = locationLabel;
+  parsed._fileName = file.name;
+  return parsed;
+}
+
+// ─── MAIN RECONCILIATION (new mode) ──────────────────────────────────────────
+async function runReconciliation() {
+  if (!stmtFiles.length || !billsFile) return;
+  const btn = document.getElementById('run-btn');
+  btn.className = 'run-btn running';
+  btn.textContent = 'Processing...';
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('log-box').innerHTML = '';
+  existingSheet1 = null; existingSheet2 = null; // clear existing-mode Excel state (credits se mantienen si ya fueron cargados)
+
+  try {
+    log('Reading Bills file...', 'info');
+    billsLookup = await readBills(billsFile);
+    log(`Loaded ${Object.keys(billsLookup).length} bills records.`, 'ok');
+
+    parsedStatements = [];
+    const multiFile = stmtFiles.length > 1;
+    for (let i = 0; i < stmtFiles.length; i++) {
+      const f = stmtFiles[i];
+      const locLabel = multiFile ? `Location ${i + 1}` : '';
+      log(`Parsing ${i+1}/${stmtFiles.length}: "${f.name}" (${f.name.split('.').pop().toUpperCase()})...`, 'info');
+      const parsed = await parseWithClaude(f, locLabel);
+      parsedStatements.push(parsed);
+      const locInfo = parsed.location ? ` — ${parsed.location}` : (locLabel ? ` — ${locLabel}` : '');
+      log(`Extracted ${parsed.transactions.length} transactions${locInfo}.`, 'ok');
+    }
+
+    vendorName = parsedStatements[0].vendor_name || 'Vendor';
+    if (multiFile) log(`Merging ${stmtFiles.length} statements for "${vendorName}"...`, 'info');
+
+    // Auto-match credits vendor now that vendorName is known
+    if (creditsAllData.length > 0) {
+      const uniqueCreditsVendors = [...new Set(creditsAllData.map(e => e.vendor).filter(Boolean))];
+      if (uniqueCreditsVendors.length > 0) {
+        const autoMatch = findBestVendorMatch(vendorName, uniqueCreditsVendors);
+        if (autoMatch && !creditsSelectedVendors.includes(autoMatch)) {
+          creditsSelectedVendors = [autoMatch];
+          Array.from(document.getElementById('credits-vendor-select').options).forEach(o => {
+            o.selected = creditsSelectedVendors.includes(o.value);
+          });
+          rebuildCreditsLookup();
+          document.getElementById('credits-vendor-count').textContent =
+            `✓ 1 vendor seleccionado · ${creditsData.length} credits en total`;
+          log(`Credits: auto-matched a "${autoMatch}" — ${creditsData.length} credits activos.`, 'warn');
+        }
+      }
+    }
+
+    log('Matching invoices against Bills...', 'info');
+    let matched = 0, notFound = 0;
+    reconciled = [];
+    parsedStatements.forEach((ps, idx) => {
+      const locLabel = multiFile ? (ps.location || ps._locationLabel || `Location ${idx+1}`) : '';
+      ps.transactions.forEach(t => {
+        const key = t.invoice_no.trim();
+        let bill_status;
+        if (key in billsLookup) { matched++; bill_status = billsLookup[key] || 'Unpaid'; }
+        else { notFound++; bill_status = 'NOT FOUND'; }
+        const creditMatch = getCreditMatch(key, vendorName);
+        const credit_info = creditMatch
+          ? { ref: creditMatch.ref, amount: creditMatch.amount, appliedAmount: creditMatch.appliedAmount, status: creditMatch.status, date: creditMatch.date }
+          : null;
+        reconciled.push({ ...t, location: locLabel, bill_status, credit_info });
+      });
+    });
+    reconciled.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    const creditedCount = reconciled.filter(r => r.credit_info).length;
+    log(`Match complete: ${matched} found, ${notFound} not in system.`, notFound > 0 ? 'warn' : 'done');
+    if (creditsData.length > 0) log(`Credits: ${creditedCount} invoice(s) tienen credit match en el CSV.`, 'warn');
+    if (notFound > 0) log(`${notFound} invoice(s) not found in Bills — may not be entered yet.`, 'warn');
+    if (multiFile) log(`Combined: ${reconciled.length} transactions across ${stmtFiles.length} locations.`, 'done');
+
+    // Re-run NS auto-match
+    if (nsAllRows.length > 0) {
+      const uniqueVendors = [...new Set(nsAllRows.map(r => r['Name']).filter(Boolean))];
+      const autoMatch = findBestVendorMatch(vendorName, uniqueVendors);
+      if (autoMatch) {
+        nsSelectedVendors = [autoMatch];
+        nsVendorRows = nsAllRows.filter(r => nsSelectedVendors.includes(r['Name']));
+        Array.from(document.getElementById('vendor-select').options).forEach(o => {
+          o.selected = nsSelectedVendors.includes(o.value);
+        });
+        document.getElementById('vendor-select-count').textContent =
+          `✓ 1 vendor seleccionado · ${nsVendorRows.length} filas en total`;
+        document.getElementById('ns-status-text').textContent =
+          `${nsAllRows.length} filas · ${nsVendorRows.length} filas para "${autoMatch}" (auto-matched)`;
+      }
+      log(`NS: ${nsVendorRows.length} filas para vendor(s) seleccionado(s).`, 'ns');
+    }
+
+    log('Preview ready. Download when satisfied.', 'done');
+    renderResults();
+
+  } catch(e) {
+    log(`Error: ${e.message}`, 'err');
+    btn.className = 'run-btn ready';
+    btn.textContent = 'Run Reconciliation';
+  }
+}
+
+// ─── RENDER RESULTS ───────────────────────────────────────────────────────────
+function renderResults() {
+  const btn = document.getElementById('run-btn');
+  btn.className = 'run-btn ready';
+  btn.textContent = 'Run Reconciliation';
+  const s1 = document.getElementById('step1-num');
+  s1.classList.remove('active'); s1.classList.add('done');
+
+  const counts = { total: reconciled.length, paid: 0, unpaid: 0, notfound: 0 };
+  reconciled.forEach(r => {
+    const s = (r.bill_status || '').toLowerCase();
+    if (s === 'paid') counts.paid++;
+    else if (s === 'not found') counts.notfound++;
+    else counts.unpaid++;
+  });
+
+  document.getElementById('result-vendor-name').textContent = vendorName + ' — Summary';
+  document.getElementById('metrics').innerHTML = `
+    <div class="metric-card"><div class="metric-label">Total Invoices</div><div class="metric-value total">${counts.total}</div></div>
+    <div class="metric-card"><div class="metric-label">Paid</div><div class="metric-value paid">${counts.paid}</div></div>
+    <div class="metric-card"><div class="metric-label">Unpaid</div><div class="metric-value unpaid">${counts.unpaid}</div></div>
+    <div class="metric-card"><div class="metric-label">Not in System</div><div class="metric-value notfound">${counts.notfound}</div></div>
+  `;
+
+  const fmt = n => (+n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const pillClass = s => s === 'Paid' ? 'pill-paid' : s === 'NOT FOUND' ? 'pill-notfound' : s ? 'pill-unpaid' : 'pill-empty';
+  const multiLoc = reconciled.some(r => r.location);
+
+  let rows = '';
+  reconciled.forEach(r => {
+    rows += `<tr>
+      <td>${r.date}</td>
+      <td class="td-inv">${r.invoice_no}</td>
+      <td style="max-width:200px;white-space:normal">${r.details}</td>
+      ${multiLoc ? `<td><span class="pill pill-loc">${r.location}</span></td>` : ''}
+      <td class="td-amount">$${fmt(r.amount)}</td>
+      <td class="td-amount" style="color:var(--muted2)">$${fmt(r.payments)}</td>
+      <td class="td-balance">$${fmt(r.balance)}</td>
+      <td><span class="pill ${pillClass(r.bill_status)}">${r.bill_status}</span></td>
+      <td>${r.credit_info
+        ? `<span class="pill ${r.credit_info.status === 'FullyApplied' ? 'pill-paid' : r.credit_info.status === 'Unapplied' ? 'pill-notfound' : 'pill-unpaid'}" title="Ref: ${r.credit_info.ref} | $${(+r.credit_info.amount||0).toLocaleString('en-US',{minimumFractionDigits:2})} | Applied: $${(+r.credit_info.appliedAmount||0).toLocaleString('en-US',{minimumFractionDigits:2})}">${r.credit_info.status}</span>`
+        : '<span class="pill pill-empty">—</span>'
+      }</td>
+    </tr>`;
+  });
+
+  const totAmt = reconciled.reduce((s, r) => s + (+r.amount || 0), 0);
+  const totBal = (parsedStatements.reduce((s, ps) => s + (+ps.total_due || 0), 0)) || reconciled.reduce((s, r) => s + (+r.balance || 0), 0);
+
+  document.getElementById('preview-table').innerHTML = `
+    <thead><tr>
+      <th>Date</th><th>Invoice No.</th><th>Details</th>
+      ${multiLoc ? '<th>Location</th>' : ''}
+      <th style="text-align:right">Amount</th>
+      <th style="text-align:right">Payments</th>
+      <th style="text-align:right">Balance</th>
+      <th>BILL</th>
+      <th>Credit</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+    <tfoot><tr>
+      <td colspan="${multiLoc ? 4 : 3}" style="text-align:right;font-weight:500">TOTAL</td>
+      <td class="total-val">$${fmt(totAmt)}</td>
+      <td></td>
+      <td class="total-val">$${fmt(totBal)}</td>
+      <td></td>
+      <td></td>
+    </tr></tfoot>`;
+
+  document.getElementById('results').style.display = 'block';
+  updateDownloadLabel();
+}
+
+// ─── DOWNLOAD EXCEL ───────────────────────────────────────────────────────────
+function downloadExcel() {
+  try {
+    if (!reconciled || !reconciled.length) { alert('No data to download. Run reconciliation first.'); return; }
+
+    const wb = XLSX.utils.book_new();
+
+    if (appMode === 'load' && existingSheet1) {
+      // ── Re-use original sheets from the uploaded Excel unchanged ──
+      XLSX.utils.book_append_sheet(wb, existingSheet1, 'Statement');
+      if (existingSheet2) XLSX.utils.book_append_sheet(wb, existingSheet2, 'Bills Reference');
+    } else {
+      // ── Build fresh from reconciled data ──
+      const multiLoc  = reconciled.some(r => r.location);
+      const totalDue  = parsedStatements.reduce((s, ps) => s + (+ps.total_due || 0), 0);
+      const stmtDate  = parsedStatements.map(ps => ps.statement_date).filter(Boolean).join(' / ');
+
+      const hdrs1 = multiLoc
+        ? ['Date','Transaction Type','Details','Invoice No.','Location','Amount ($)','Payments ($)','Balance ($)','BILL','Credit Ref','Credit Amount ($)','Credit Applied ($)','Credit Status']
+        : ['Date','Transaction Type','Details','Invoice No.','Amount ($)','Payments ($)','Balance ($)','BILL','Credit Ref','Credit Amount ($)','Credit Applied ($)','Credit Status'];
+      const rows1 = [
+        ['Vendor Statement — ' + vendorName],
+        ['Statement Date: ' + stmtDate + '   |   Total Due: $' + totalDue.toFixed(2)],
+        [],
+        hdrs1
+      ];
+      reconciled.forEach(r => {
+        rows1.push(multiLoc
+          ? [r.date, r.type||'Invoice', r.details, r.invoice_no, r.location||'', +(r.amount)||0, +(r.payments)||0, +(r.balance)||0, r.bill_status, r.credit_info?r.credit_info.ref:'', r.credit_info?+(r.credit_info.amount)||0:'', r.credit_info?+(r.credit_info.appliedAmount)||0:'', r.credit_info?r.credit_info.status:'']
+          : [r.date, r.type||'Invoice', r.details, r.invoice_no, +(r.amount)||0, +(r.payments)||0, +(r.balance)||0, r.bill_status, r.credit_info?r.credit_info.ref:'', r.credit_info?+(r.credit_info.amount)||0:'', r.credit_info?+(r.credit_info.appliedAmount)||0:'', r.credit_info?r.credit_info.status:'']);
+      });
+      const totAmt1 = reconciled.reduce((s,r) => s+(+(r.amount)||0), 0);
+      const totBal1 = totalDue || reconciled.reduce((s,r) => s+(+(r.balance)||0), 0);
+      rows1.push(multiLoc
+        ? ['','','','TOTAL','', totAmt1, 0, totBal1, '','','','']
+        : ['','','','TOTAL', totAmt1, 0, totBal1, '','','','']);
+      const ws1 = XLSX.utils.aoa_to_sheet(rows1);
+      ws1['!cols'] = multiLoc
+        ? [{wch:13},{wch:16},{wch:38},{wch:15},{wch:16},{wch:14},{wch:14},{wch:14},{wch:13},{wch:14},{wch:18},{wch:18},{wch:16}]
+        : [{wch:13},{wch:16},{wch:42},{wch:15},{wch:14},{wch:14},{wch:14},{wch:13},{wch:14},{wch:18},{wch:18},{wch:16}];
+      XLSX.utils.book_append_sheet(wb, ws1, 'Statement');
+
+      const rows2 = [['Invoice No.', 'Payment Status']];
+      Object.keys(billsLookup).forEach(k => rows2.push([k, billsLookup[k]]));
+      const ws2 = XLSX.utils.aoa_to_sheet(rows2);
+      ws2['!cols'] = [{wch:18},{wch:16}];
+      XLSX.utils.book_append_sheet(wb, ws2, 'Bills Reference');
+    }
+
+    // ── Tab 3: NS Open Items (always built from live data) ──
+    if (nsVendorRows && nsVendorRows.length > 0) buildNSTab(wb);
+
+    const safe = (vendorName||'Vendor').replace(/[^a-zA-Z0-9_ -]/g,'').trim();
+    const filename = safe + '_Reconciliation_' + new Date().toISOString().slice(0,10) + '.xlsx';
+    const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'base64' });
+    const a = document.createElement('a');
+    a.href = 'data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,' + wbout;
+    a.download = filename;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => document.body.removeChild(a), 1500);
+    const tabInfo = nsVendorRows.length > 0 ? ' (3 tabs — incl. NS Open Items)' : '';
+    log('Downloaded: ' + filename + tabInfo, 'done');
+
+  } catch(err) {
+    alert('Download error: ' + err.message);
+    log('Download error: ' + err.message, 'err');
+    console.error(err);
+  }
+}
+
+// ─── BUILD NS TAB ─────────────────────────────────────────────────────────────
+function buildNSTab(wb) {
+  const normKey = k => String(k).toLowerCase().replace(/^0+/, '').trim();
+
+  // ── Lookup 1: Statement Matching — from Tab 1 (reconciled vendor statement)
+  // Maps invoice_no → bill_status (Paid / Unpaid / NOT FOUND)
+  const stmtLookup = {};
+  reconciled.forEach(r => {
+    const key = String(r.invoice_no || '').trim();
+    if (key) stmtLookup[key] = r.bill_status;
+  });
+  const stmtLookupNorm = {};
+  Object.keys(stmtLookup).forEach(k => { stmtLookupNorm[normKey(k)] = stmtLookup[k]; });
+
+  // ── Lookup 2: Bill info — from Tab 2 (Bills Reference / billsLookup)
+  // Maps invoice no. → payment status (Paid / Unpaid / etc.)
+  // billsLookup is already populated from the Bills file
+  const billsLookupNorm = {};
+  Object.keys(billsLookup).forEach(k => { billsLookupNorm[normKey(k)] = billsLookup[k]; });
+
+  const nsTabHdrs = ['Name','Transaction Type','Date','Document Number','Due Date','Age','Open Balance','Statement Matching','Bill info'];
+  const nsRows = [
+    ['NS Open Items — ' + nsSelectedVendors.join(' + ')],
+    ['Cross-referenced con Statement: ' + (vendorName || '') + '  |  ' + nsVendorRows.length + ' filas'],
+    [],
+    nsTabHdrs
+  ];
+
+  nsVendorRows.forEach(r => {
+    const docNum = String(r['Document Number'] || '').trim();
+
+    // Statement Matching: look up in Tab 1
+    let stmtMatch = docNum && docNum in stmtLookup ? stmtLookup[docNum] : null;
+    if (!stmtMatch && docNum) stmtMatch = stmtLookupNorm[normKey(docNum)] || null;
+
+    // Bill info: look up in Tab 2 (billsLookup) — only for bills from this vendor
+    // We don't filter by vendor here because billsLookup is already scoped to what was uploaded
+    let billInfo = docNum && docNum in billsLookup ? billsLookup[docNum] : null;
+    if (!billInfo && docNum) billInfo = billsLookupNorm[normKey(docNum)] || null;
+
+    const balRaw = r['Open Balance'] || '';
+    const balNum = parseFloat(balRaw);
+    nsRows.push([
+      r['Name']             || '',
+      r['Transaction Type'] || '',
+      r['Date']             || '',
+      docNum,
+      r['Due Date']         || '',
+      r['Age']              || '',
+      isNaN(balNum) ? balRaw : balNum,
+      stmtMatch || 'N/A',
+      billInfo  || 'N/A'
+    ]);
+  });
+
+  const ws3 = XLSX.utils.aoa_to_sheet(nsRows);
+  ws3['!cols'] = [{wch:32},{wch:16},{wch:13},{wch:18},{wch:13},{wch:8},{wch:16},{wch:20},{wch:16}];
+  XLSX.utils.book_append_sheet(wb, ws3, 'NS Open Items');
+}
+
+// ─── RESET ────────────────────────────────────────────────────────────────────
+function resetAll() {
+  stmtFiles = []; billsFile = null; nsFile = null; existingFile = null; creditsFile = null;
+  reconciled = []; billsLookup = {}; billsAllRows = []; billsHeaders = [];
+  creditsData = []; creditsLookup = {};
+  creditsAllData = []; creditsSelectedVendors = [];
+  vendorName = ''; parsedStatements = [];
+  nsAllRows = []; nsHeaders = []; nsVendorRows = []; nsSelectedVendors = [];
+  existingSheet1 = null; existingSheet2 = null;
+
+  ['file-stmt','file-bills','file-ns','file-existing','file-credits'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  document.getElementById('chips-stmt').innerHTML = '';
+  document.getElementById('hint-stmt').style.display = 'none';
+  ['bills','ns','existing','credits'].forEach(w => {
+    const n = document.getElementById('name-'+w); if (n) { n.textContent=''; n.classList.remove('visible'); }
+  });
+  ['stmt','bills','ns','existing','credits'].forEach(w => {
+    const ch = document.getElementById('check-'+w); if (ch) ch.classList.remove('visible');
+    const zo = document.getElementById('zone-'+w);  if (zo) zo.classList.remove('has-file','dragging');
+  });
+
+  document.getElementById('ns-status').className = 'ns-status';
+  document.getElementById('ns-status-text').textContent = '';
+  document.getElementById('vendor-selector-wrap').classList.remove('visible');
+  document.getElementById('vendor-select').innerHTML = '';
+  document.getElementById('vendor-select-count').textContent = '';
+  document.getElementById('existing-status').className = 'existing-status';
+  document.getElementById('credits-status').className = 'credits-status';
+  document.getElementById('credits-status-text').textContent = '';
+  document.getElementById('existing-status-text').textContent = '';
+  document.getElementById('credits-vendor-selector-wrap').classList.remove('visible');
+  document.getElementById('credits-vendor-select').innerHTML = '';
+  document.getElementById('credits-vendor-count').textContent = '';
+
+  document.getElementById('step1-num').className = 'step-num active';
+  document.getElementById('step2-num').className = 'step-num';
+  document.getElementById('run-btn').className = 'run-btn';
+  document.getElementById('run-btn').textContent = 'Run Reconciliation';
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('btn-download').textContent = '↓ Download Excel';
+  document.getElementById('log-box').innerHTML =
+    '<div class="log-line"><span class="log-dot info"></span><span class="log-text info">Waiting for files...</span></div>';
+
+  setMode('new');
+}
+
+// ─── CONNECTION TEST ──────────────────────────────────────────────────────────
+async function testConnection() {
+  const resultEl = document.getElementById('conn-test-result');
+  const apiKey = localStorage.getItem('cu_api_key') || '';
+  resultEl.className = 'conn-test-result';
+  resultEl.textContent = 'Probando...';
+
+  if (!apiKey || !apiKey.startsWith('sk-ant')) {
+    resultEl.className = 'conn-test-result err';
+    resultEl.textContent = '✗ Primero configurá tu API key (botón arriba a la derecha)';
+    return;
+  }
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 10,
+        messages: [{ role: 'user', content: 'ping' }]
+      })
+    });
+    if (resp.ok || resp.status === 400) {
+      resultEl.className = 'conn-test-result ok';
+      resultEl.textContent = '✓ Conexión OK — la API responde correctamente';
+      // Hide the banner since connection works
+      document.getElementById('protocol-banner').classList.remove('visible');
+      log('Conexión con la API verificada correctamente.', 'ok');
+    } else if (resp.status === 401) {
+      resultEl.className = 'conn-test-result err';
+      resultEl.textContent = '✗ API key inválida o vencida';
+    } else if (resp.status === 429) {
+      resultEl.className = 'conn-test-result ok';
+      resultEl.textContent = '✓ Conexión OK (rate limit activo, pero la API responde)';
+      document.getElementById('protocol-banner').classList.remove('visible');
+    } else {
+      resultEl.className = 'conn-test-result err';
+      resultEl.textContent = `✗ Error HTTP ${resp.status}`;
+    }
+  } catch(e) {
+    resultEl.className = 'conn-test-result err';
+    resultEl.textContent = '✗ Sin conexión — Chrome bloquea este archivo. Usá las opciones de arriba.';
+  }
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+loadApiKey();
+
+// Detect file:// protocol and show banner
+if (window.location.protocol === 'file:') {
+  document.getElementById('protocol-banner').classList.add('visible');
+}
+</script>
+</body>
+</html>
